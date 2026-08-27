@@ -13,19 +13,21 @@ struct ContentView: View {
     @State private var winner: String? = nil
     @State private var isDraw: Bool = false
     @State private var isAIThinking: Bool = false
-
+    @State private var winningLine: [Int] = []
+    @State private var gameID = UUID()
+    
     private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
-
+    
     var body: some View {
         VStack(spacing: 24) {
             Text("Tic Tac Toe")
                 .font(.largeTitle)
                 .fontWeight(.bold)
-
+            
             Text(statusText)
                 .font(.title3)
                 .foregroundStyle(statusColor)
-
+            
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(0..<9, id: \.self) { index in
                     Button {
@@ -33,26 +35,48 @@ struct ContentView: View {
                     } label: {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.secondarySystemBackground))
+                                .fill(
+                                    winningLine.contains(index)
+                                        ? Color.green.opacity(0.5)
+                                        : Color(.secondarySystemBackground)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            winningLine.contains(index)
+                                                ? .yellow
+                                                : .clear,
+                                            lineWidth: 4
+                                        )
+                                )
+                                .scaleEffect(
+                                    winningLine.contains(index) ? 1.08 : 1.0
+                                )
+                                .animation(
+                                    .spring(response: 0.4, dampingFraction: 0.6),
+                                    value: winningLine
+                                )
                                 .frame(height: 96)
                             Text(board[index])
                                 .font(.system(size: 48, weight: .bold))
                                 .foregroundStyle(board[index] == "X" ? .blue : .red)
+                                .scaleEffect(board[index].isEmpty ? 0.5 : 1.0)
+                                .animation(.spring(), value: board[index])
                         }
                     }
-                    .disabled(board[index] != "" || winner != nil)
+                    .disabled(board[index] != "" || winner != nil || isAIThinking)
                 }
             }
             .padding(.horizontal)
-
-            Button("Reset") {
+            
+            Button (winner != nil || isDraw ? "Play Again" : "Reset") {
                 resetGame()
             }
             .buttonStyle(.borderedProminent)
         }
         .padding()
     }
-
+    
     private var statusText: String {
         if let winner {
             return "Winner: \(winner)"
@@ -65,44 +89,50 @@ struct ContentView: View {
         }
         return "Current Player: \(currentPlayer)"
     }
-
+    
     private var statusColor: Color {
-        if winner != nil {
-            return .green
+        if winner == "X" {
+            return .blue
+        }
+        if winner == "O" {
+            return .red
         }
         if isDraw {
             return .orange
         }
         return .primary
     }
-
+    
     private func handleTap(at index: Int) {
         guard board[index].isEmpty, winner == nil, !isAIThinking, currentPlayer == "X" else { return }
-
+        
         makeMove(at: index, for: "X")
-
+        
         if winner == nil, !isDraw, currentPlayer == "O" {
             performAIMove()
         }
     }
-
-    private func checkWinner(for player: String) -> Bool {
+    
+    private func checkWinner(for player: String) -> [Int]? {
         let wins = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8],
             [0, 3, 6], [1, 4, 7], [2, 5, 8],
             [0, 4, 8], [2, 4, 6]
         ]
 
-        return wins.contains { line in
+        return wins.first { line in
             line.allSatisfy { board[$0] == player }
         }
     }
 
     private func makeMove(at index: Int, for player: String) {
         board[index] = player
-
-        if checkWinner(for: player) {
-            winner = player
+        
+        if let line = checkWinner(for: player) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                winningLine = line
+                winner = player
+            }
             return
         }
 
@@ -116,11 +146,19 @@ struct ContentView: View {
 
     private func performAIMove() {
         isAIThinking = true
+        
+        let currentGameID = gameID
 
         Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
 
             await MainActor.run {
+                
+                guard currentGameID == gameID else {
+                    isAIThinking = false
+                    return
+                }
+                
                 guard winner == nil, !isDraw, currentPlayer == "O" else {
                     isAIThinking = false
                     return
@@ -187,8 +225,10 @@ struct ContentView: View {
         board = Array(repeating: "", count: 9)
         currentPlayer = "X"
         winner = nil
+        winningLine = []
         isDraw = false
         isAIThinking = false
+        gameID = UUID()
     }
 }
 
