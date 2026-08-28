@@ -1,10 +1,9 @@
 //
 //  ContentView.swift
-//  TicTacToeApp
+//  Tic-Tac-Toe
 //
 //  Created by Geoff Lewis on 11/03/2026.
 //
-
 
 import SwiftUI
 
@@ -16,6 +15,12 @@ struct ContentView: View {
     @State private var isAIThinking: Bool = false
     @State private var winningLine: [Int] = []
     @State private var gameID = UUID()
+    
+    private let winningPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ]
     
     private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
     
@@ -115,13 +120,9 @@ struct ContentView: View {
     }
     
     private func checkWinner(for player: String) -> [Int]? {
-        let wins = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],
-            [0, 4, 8], [2, 4, 6]
-        ]
+        
 
-        return wins.first { line in
+        return winningPatterns.first { line in
             line.allSatisfy { board[$0] == player }
         }
     }
@@ -200,17 +201,12 @@ struct ContentView: View {
     }
 
     private func findWinningMove(for player: String, in emptyIndices: [Int]) -> Int? {
-        let wins = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],
-            [0, 4, 8], [2, 4, 6]
-        ]
 
         for index in emptyIndices {
             var testBoard = board
             testBoard[index] = player
 
-            let isWinning = wins.contains { line in
+            let isWinning = winningPatterns.contains { line in
                 line.allSatisfy { testBoard[$0] == player }
             }
 
