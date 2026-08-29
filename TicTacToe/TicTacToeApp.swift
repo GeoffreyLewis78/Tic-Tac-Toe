@@ -1,6 +1,8 @@
 //
-//  TestApp.swift
-//  Test
+//  TicTacToeApp.swift
+//  Tic-Tac-Toe
+//
+//  Application entry point.
 //
 //  Created by Geoff Lewis on 11/03/2026.
 //
